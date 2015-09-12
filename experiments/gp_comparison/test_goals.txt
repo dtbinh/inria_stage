@@ -1,0 +1,139 @@
+- Make the same experiment with the GP on the benchmark. See if it is the same trend as in the simulator.
+	-- Do this also for different number of dimensions 1--12.
+- Do the same experiment with LIMBO just to make sure if everything works fine.
+- other GP implementations: LIBGP in case of an issue.
+- Don't take as prior the PF only. Mix it with some random points to get a better view of the objective.
+- IROS paper.
+- Another exp: Use a mix of the priors and random points for the GP comparison.
+- Look at the stalling issue in Serena machine. Probably it is an issue in the code. Possibly the V-REP. Try with the benchmark function, see if this happens.
+
+- Reduce the number of parameters in the controller (fixing other parameters). Repeat the learning experiments for each for them. DONE.
+	-- Done for 1-D. The GP learns nicely.
+	-- Do this experiment for all controllers from 2-D till 6-D. I want to know - for sure - when the GP breaks down in this robotic experiment.
+    -- Also, perform extensive data analysis and visualization for the 1-D and 2-D controllers. The target is to get better understanding of the robot controller.
+    and maybe I can design a good benchmark for it for future use.
+
+- For the real robot experiments: Try to do learn something (mainly it is integration test, to make sure that everything is working fine now).
+    -- Maybe I can just use the BOptimizerfor a quick learning test.
+
+- Measure the variance in the simulator results -- For the speed, with 200 runs, we get 1.10933564797e-31 variance ONLY --> DONE. Conclusion: Nothing to worry about.
+
+************************
+FOR THE CREADAPT ROBOT
+************************
+- 1. first, having a parametrised walking controller on it
+- 2. second, run boptimiser for some time and hopefully see the robot learns
+- 3. third, run boptimiser with the svm prior from simulation
+- 4. compare 2&3
+- 5. ultimately run EHVI with the SVM priors on the robot
+
+************************************************
+FOR THE SIMULATION EXPERIMENT
+************************************************
+"""
+Note from JB
+The key idea is to use a different robot for the SVM and the GP (an intact robot for the SVM,
+a broken/different robot for the GP). And we want to see how much we can predict on the broken/different robot.
+"""
+- For 2-D (which we know is OK to learn), do the following: - DONE, NOT PROMISING!
+	- Make a new simulation for a damaged robot (remove one leg).
+	- Modify the "test_case_service" script to accept a new input to decide if the test is on a
+	damaged robot or a good one.
+	- On the good robot, learn the following models and score them:
+		- model 0 : (svm_prediction + gp_prediction) / 2
+		- model 1 : svm_prediction * gp_prediction
+		- model 2 : svm_prediction + gp mean square error for the predicted values
+		- model 3 : svm alone
+		- model 4 : gp_prediction alone
+	- Save these models to an external file.
+	- On the damaged robot, get 1000 random samples, and score each of the previously
+	learned models (from the good robot) with these points.
+
+- Proposed new experiments:
+    - Compare the performance of the following models on the 12-D controller:
+        - Models to compare
+            - Using clustering, fit a model for each cluster. In prediction, classify the point to which cluster, and use the GP of this cluster to predict the value. (already implemented)
+            - Using clustering, fit a model for the "centroids" of the clusters. The prediction will be directly to this single GP.
+                -- This will be one GP, but a smart one, where the training data covers the search space properly and efficiently.
+                -- Combine all the data I have in order to get the best centroids.
+                -- Also, experiment with the number of clusters (how does it make a difference).
+            - Using clustering, fit a model for each cluster, and a model for the centroids (a general model and local models). In prediction,
+            classify the point to which cluster, and then compare the MSE of this GP and the global GP, and select the prediction of the model with the least MSE.
+            - A GP fitted with some random points (the normal GP).
+        - Notes:
+            - First, make a test for each algorithm in order to select the perfect number of clusters (the number that lead to the best model).
+
+    - On optimization, if there is a model that perform better than a GP with uniform points:
+        -
+
+---------------------
+subgoals:
+
+- Merge the random priors I have on this machine and on precision. DONE.
+- Make a continuous running process to build random priors on precision. DONE
+- Change the default of all kernels to "squared_exponential". DONE
+- Increase the number of test samples to 1000 sample in order to make the test good enough. DONE
+- Make the fitting of the GP a parallel process (it will short the time to a 1/8 or 1/24 or the original time). DONE
+- Remake the GP learning experiment on the robot with these new modifications. DONE
+- Do the GP learning experiment on the benchmark problems (use PyGMO and skit packages). I NEED TO MAKE IT FOR DIFFERENT DIMENSIONS
+- Change the "Predication error" metric to "R2 score" metric, since the prediction error doesn't tell us how good the model is. DONE
+- Fix the problem I have in EHVI (that I have constrained the learning range(). Repeat some of EHVI experiments to make sure how
+this mistake affect the previous results. IN PROGRESS. SUPER SLOW.
+- Build a new problem for PyGMO similar to the robot problem in LIMBO (with 2 GP). DONE.
+- X: Get the NSGA-2 priors that I have made before into an "easy to parse" format. DONE
+- Y: Run NSGA-2 with 200 pop and 200 generation for 20 times in order to generate good priors. CANCELLED.
+- Do the following experiments: DONE --> Catastrophic results.
+	-- From X, fit GP with 100 random points and 100 random PF points. Optimize GP with NSGA-2. Compare the resulting HV to 
+	optimizing GP with totally random points.
+	-- When Y is ready, fit GP with 100 random points and 100 random PF points from each PF. Optimize GP with NSGA-2. Compare the 		resulting PF from NSGA-2 directly.
+	-- Just out of curiosity, repeat the 2nd experiment with fitting GP with PF points only. See what happens. - NOT A PRIORITY - .
+- Make a wrapper for the EHVI library with Python.
+- If the previous experiments show that optimizing GP can outperform NSGA-2 PF, then use these GP with NSGA-2, and compare the results. CANCELLED. CATASTROPHIC RESULTS.
+
+- Re-build my databases for all dimensions using LHS sampling technique.
+----------------------------
+Things I read and lessons:
+- The paper "on the design of optimization strategies based on global surface approximation models":
+	- Concerning the suitable number of sampling points: it suggests that we start with small number (really small), and
+	then move ahead from here. The thing is, it suggests that it not necessary that we will have a good model from the
+	beginning. Yet, with the use of the prediction from the model to decide the next model to sample, this will be at least as
+	effective as random sampling.
+		#TODO: Make a new experiment on 6-D robot problem to compare: A GP model initialized with 100 uniformly random points VS 100 LHS points VS a model that start with only 10 points, then I optimize it with boptimizer (think about this issue), then get the next point to sample, till we reach a total of 100 points.
+----------------------------
+Crazy ideas:
+- Make an experiment in python, a single objective optimization problem. The target is to maximize the size of the hypervolume. Try two configurations:
+	- Each objective will be represented by a GP (or any other learning model). The optimizer will select a point to sample. After 
+	returning the result, fit the GP with this new point. Continue to do so till the number of evaluations is over. 
+	- Sample directly from the simulator. Start with some random points.
+- Another interesting experiment is to represent each objective by a GP. Use NSGA-2 for example to get the PF from these GP. Then, sample this PF from the actual robot, fit them to the GP, and repeat, till you're finish the allowed number of evaluations.
+	-- This could be interesting if we want to build a good prior. Let me think....No, it could be a problem. If the GP is not a good
+	model, then it will lead to bad choices of PF points.....Hmmm, after more thinking, I don't know. It could work. I need to try.
+
+---------------------------
+Questions I don't have answer for:
+- When fitting the GP with a mix of priors and random points, the GP performs waaaaaaay more poorly than with random points alone. Why?? It doesn't seem right.
+-------------------------------------------
+Implementation details:
+- Create a utilities file which has:
+	- A class for the robot which takes the following inputs
+		- Whether to use existing points or not.
+		- If to use existing points, specify the file name.
+		- Also, specify the data parser.
+		- If to use new points, specify the sampling method. -- Look at scikit, maybe you find something interesting.
+			- And make sure you save the new point into a file.
+		- Is the robot a good or a damaged robot.
+		- The dimensionality of the problem.
+		- A list containing the objectives
+			- [0] means we want the height
+			- [1] means we want the speed
+			- [0,1] we want both.
+			- ..... etc
+			- Depending on the length of this list, a number of models will be initialized.
+		- The learning model that will be used.
+		- The mean will be the samples mean. It is no longer an input.
+	- Create a class for robot testing.
+	- A class for statistics and graphing
+		# TODO: Have a good definition for class for statistics and graphing
+	- Define global variables in this file
+		- The path to the simulator
+		- The current path.
