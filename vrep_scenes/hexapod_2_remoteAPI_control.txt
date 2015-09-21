@@ -1,0 +1,88 @@
+simSetThreadSwitchTiming(2)
+
+-- Get some handles first:
+local joint_0=simGetObjectHandle("hexa_joint1_0") -- Handle of the left motor
+local joint_1=simGetObjectHandle("hexa_joint2_0") -- Handle of the left motor
+local joint_02=simGetObjectHandle("hexa_joint3_0") -- Handle of the left motor
+
+local joint_3=simGetObjectHandle("hexa_joint1_1") -- Handle of the left motor
+local joint_4=simGetObjectHandle("hexa_joint2_1") -- Handle of the left motor
+local joint_112=simGetObjectHandle("hexa_joint3_1") -- Handle of the left motor
+
+local joint_6=simGetObjectHandle("hexa_joint1_2") -- Handle of the left motor
+local joint_7=simGetObjectHandle("hexa_joint2_2") -- Handle of the left motor
+local joint_22=simGetObjectHandle("hexa_joint3_2") -- Handle of the left motor
+
+local joint_8=simGetObjectHandle("hexa_joint1_3") -- Handle of the left motor
+local joint_9=simGetObjectHandle("hexa_joint2_3") -- Handle of the left motor
+local joint_32=simGetObjectHandle("hexa_joint3_3") -- Handle of the left motor
+
+local joint_10=simGetObjectHandle("hexa_joint1_4") -- Handle of the left motor
+local joint_11=simGetObjectHandle("hexa_joint2_4") -- Handle of the left motor
+local joint_42=simGetObjectHandle("hexa_joint3_4") -- Handle of the left motor
+
+local joint_12=simGetObjectHandle("hexa_joint1_5") -- Handle of the left motor
+local joint_13=simGetObjectHandle("hexa_joint2_5") -- Handle of the left motor
+local joint_52=simGetObjectHandle("hexa_joint3_5") -- Handle of the left motor
+
+-- Add a banner:
+black={0,0,0,0,0,0,0,0,0,0,0,0}
+purple={0,0,0,0,0,0,0,0,0,1,0,1}
+simAddBanner("Omar the devil tries to control me :'( ",0,sim_banner_bitmapfont+sim_banner_overlay,nil,simGetObjectAssociatedWithScript(sim_handle_self),black,purple)
+
+-- Choose a port that is probably not used (try to always use a similar code):
+simSetThreadAutomaticSwitch(false)
+local portNb=simGetIntegerParameter(sim_intparam_server_port_next)
+local portStart=simGetIntegerParameter(sim_intparam_server_port_start)
+local portRange=simGetIntegerParameter(sim_intparam_server_port_range)
+local newPortNb=portNb+1
+if (newPortNb>=portStart+portRange) then
+	newPortNb=portStart
+end
+simSetIntegerParameter(sim_intparam_server_port_next,newPortNb)
+simSetThreadAutomaticSwitch(true)
+
+-- Check what OS we are using:
+platf=simGetIntegerParameter(sim_intparam_platform)
+if (platf==0) then
+	pluginFile='v_repExtRemoteApi.dll'
+end
+if (platf==1) then
+	pluginFile='libv_repExtRemoteApi.dylib'
+end
+if (platf==2) then
+	pluginFile='libv_repExtRemoteApi.so'
+end
+
+-- Check if the required remote Api plugin is there:
+moduleName=0
+moduleVersion=0
+index=0
+pluginNotFound=true
+while moduleName do
+	moduleName,moduleVersion=simGetModuleName(index)
+	if (moduleName=='RemoteApi') then
+		pluginNotFound=false
+	end
+	index=index+1
+end
+
+if (pluginNotFound) then
+	-- Plugin was not found
+	simDisplayDialog('Error',"Remote Api plugin was not found. ('"..pluginFile.."')&&nSimulation will not run properly",sim_dlgstyle_ok,true,nil,{0.8,0,0,0,0,0},{0.5,0,0,1,1,1})
+else
+	-- Ok, we found the plugin.
+	-- We first start the remote Api server service (this requires the v_repExtRemoteApi plugin):
+	simExtRemoteApiStart(portNb) -- this server function will automatically close again at simulation end
+
+	-- Now we start the client application:
+	result=simLaunchExecutable('hexapod_play',portNb.." "..joint_0.." "..joint_1.." "..joint_02.." "..joint_3.." "..joint_4.." "..joint_112.." "..joint_6.." "..joint_7.." "..joint_22.." "..joint_8.." "..joint_9.." "..joint_32.." "..joint_10.." "..joint_11.." "..joint_42.." "..joint_12.." "..joint_13.." "..joint_52,0) -- set the last argument to 1 to see the console of the launched client
+
+	if (result==-1) then
+		-- The executable could not be launched!
+		simDisplayDialog('Error',"'hexapod_play' could not be launched. &&nSimulation will not run properly",sim_dlgstyle_ok,true,nil,{0.8,0,0,0,0,0},{0.5,0,0,1,1,1})
+	end
+end
+
+-- This thread ends here. The bubbleRob will however still be controlled by
+-- the client application via the remote Api mechanism!s
